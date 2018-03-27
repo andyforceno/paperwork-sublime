@@ -1,0 +1,5 @@
+[
+  { "caption": "Paperwork: Open Note", "command": "open_note" },
+ { "caption": "Paperwork: Save New Note", "command": "save_new_note" },
+ { "caption": "Paperwork: Save Existing Note", "command": "save_existing_note" }
+]

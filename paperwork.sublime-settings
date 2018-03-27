@@ -1,0 +1,6 @@
+{
+    "username": "",      // Your Paperwork username
+    "password": "",    // Your Paperwork password
+    "domain": "",           // Your domain, e.g. example.com
+    "protocol": "https"           // http or https        
+}
