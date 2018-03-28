@@ -6,7 +6,6 @@ Paperwork for Sublime Text 3 allows you to open and save Paperwork notes via com
 This works best with notes that are plain text. There is only basic parsing of HTML to convert some formatting tags (and ST3's Python doesn't include html2text).
 
 This is potentially buggy. It works well enough for me to use, but I make no guarantees that it won't crash plugin_host. I have some safeguards in place so you won't overwrite the wrong note.
-
 To use:
 Copy paperwork.py, Default.sublime-commands, and paperwork.sublime-settings your ST3-config-folder/Packages/User/  
 Edit paperwork.sublime-settings to fill in your username, password, domain, and specify http or https.
