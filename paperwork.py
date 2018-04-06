@@ -12,20 +12,20 @@ settings.add_on_change('reload', sublime.load_settings('paperwork.sublime-settin
 class OpenNoteCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         notebooklist = paper.list_notebooks()
-        sublime.active_window().show_quick_panel(notebooklist, self.list_notes, sublime.KEEP_OPEN_ON_FOCUS_LOST)
+        sublime.active_window().show_quick_panel(sorted(notebooklist), self.list_notes)
 
     def list_notes(self, index):
         if index == -1:
                 return 
 
-        notebooklist = paper.list_notebooks()
+        notebooklist = sorted(paper.list_notebooks())
         notebooktitle = notebooklist[index]
         OpenNoteCommand.notebookid = paper.notebook_to_id(notebooktitle)
         self.notelist = paper.list_notes(self.notebookid)
-        sublime.active_window().show_quick_panel(self.notelist, self.show_note, sublime.KEEP_OPEN_ON_FOCUS_LOST)
+        sublime.active_window().show_quick_panel(sorted(self.notelist), self.show_note)
 
     def show_note(self, index):
-        notelist = paper.list_notes(self.notebookid)
+        notelist = sorted(paper.list_notes(self.notebookid))
         OpenNoteCommand.notetitle = notelist[index]
         noteid = paper.note_to_id(self.notetitle)
         self.view.run_command("view_note")
@@ -36,7 +36,7 @@ class ViewNoteCommand(sublime_plugin.TextCommand):
         noteid = paper.note_to_id(OpenNoteCommand.notetitle)
         note = paper.get_note(OpenNoteCommand.notebookid, noteid)
         note = paper.html2text(note)
-        self.view = self.view.window().new_file()
+        self.view = sublime.active_window().new_file()
         windowtitle = paper.get_note_title(OpenNoteCommand.notebookid, noteid)
         self.view.set_name(windowtitle)
         self.view.insert(edit, self.view.sel()[0].begin(), note)
@@ -44,22 +44,22 @@ class ViewNoteCommand(sublime_plugin.TextCommand):
 class SaveExistingNoteCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         notebooklist = paper.list_notebooks()
-        sublime.active_window().show_quick_panel(notebooklist, self.list_notes, sublime.KEEP_OPEN_ON_FOCUS_LOST)
+        sublime.active_window().show_quick_panel(sorted(notebooklist), self.list_notes)
 
     def list_notes(self, index):
         if index == -1:
                 return 
 
-        notebooklist = paper.list_notebooks()
+        notebooklist = sorted(paper.list_notebooks())
         notebooktitle = notebooklist[index]
         OpenNoteCommand.notebookid = paper.notebook_to_id(notebooktitle)
         self.notelist = paper.list_notes(OpenNoteCommand.notebookid)
         # TODO: Is this needed?
         viewnote = ViewNoteCommand(self.view)
-        sublime.active_window().show_quick_panel(self.notelist, self.save_note, sublime.KEEP_OPEN_ON_FOCUS_LOST)
+        sublime.active_window().show_quick_panel(sorted(self.notelist), self.save_note)
 
     def save_note(self, index):
-        notelist = paper.list_notes(OpenNoteCommand.notebookid)
+        notelist = sorted(paper.list_notes(OpenNoteCommand.notebookid))
         OpenNoteCommand.notetitle = notelist[index]
         noteid = paper.note_to_id(OpenNoteCommand.notetitle)
         self.view.run_command("save_existing")
@@ -73,7 +73,7 @@ class SaveExisting(sublime_plugin.TextCommand):
         content_preview = self.note[:40]
         self.note = paper.text2html(self.note)
         content_preview = paper.text2html(content_preview)
-        
+
         if OpenNoteCommand.notetitle == viewtitle:
             try:
                 editnote = paper.edit_note(OpenNoteCommand.notebookid, noteid, viewtitle, self.note, content_preview)
@@ -89,7 +89,7 @@ class SaveNewNoteCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         self.notebooklist = paper.list_notebooks()
         # Display list of notebooks
-        sublime.active_window().show_quick_panel(self.notebooklist, self.create_note, sublime.KEEP_OPEN_ON_FOCUS_LOST)
+        sublime.active_window().show_quick_panel(sorted(self.notebooklist), self.create_note)
 
     def create_note(self, index):
         if index == -1:
@@ -101,7 +101,7 @@ class SaveNewNoteCommand(sublime_plugin.TextCommand):
             viewtitle = "Untitled Note"
             self.view.set_name(viewtitle)   
 
-        notebooklist = paper.list_notebooks()
+        notebooklist = sorted(paper.list_notebooks())
         notebooktitle = notebooklist[index]
         notebookid = paper.notebook_to_id(notebooktitle)
         notelist = paper.list_notes(notebookid)
@@ -300,6 +300,9 @@ class PaperworkAPI(object):
         note = re.sub('&lt;','<', note)
         note = re.sub('&gt;','>', note)
         note = re.sub('<p dir="ltr">','\n\n', note)
+        note = re.sub('<br clear="none">', '\n', note)
+        note = re.sub('</div><div>', '\n', note)
+        note = re.sub('&quot;', '"', note)
         return note
 
 paper = PaperworkAPI()
