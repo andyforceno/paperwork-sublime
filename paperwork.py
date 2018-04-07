@@ -58,7 +58,7 @@ class SaveExistingNoteCommand(sublime_plugin.TextCommand):
         OpenNoteCommand.notebookid = paper.notebook_to_id(notebooktitle)
         self.notelist = paper.list_notes(OpenNoteCommand.notebookid)
         # TODO: Is this needed?
-        viewnote = ViewNoteCommand(self.view)
+        #viewnote = ViewNoteCommand(self.view)
         sublime.active_window().show_quick_panel(sorted(self.notelist), self.save_note)
 
     def save_note(self, index):
