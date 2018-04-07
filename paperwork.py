@@ -25,6 +25,9 @@ class OpenNoteCommand(sublime_plugin.TextCommand):
         sublime.active_window().show_quick_panel(sorted(self.notelist), self.show_note)
 
     def show_note(self, index):
+        if index == -1:
+                return
+    
         notelist = sorted(paper.list_notes(self.notebookid))
         OpenNoteCommand.notetitle = notelist[index]
         noteid = paper.note_to_id(self.notetitle)
@@ -32,13 +35,13 @@ class OpenNoteCommand(sublime_plugin.TextCommand):
 
 class ViewNoteCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        notelist = paper.list_notes(OpenNoteCommand.notebookid)
+        notelist = sorted(paper.list_notes(OpenNoteCommand.notebookid))
         noteid = paper.note_to_id(OpenNoteCommand.notetitle)
         note = paper.get_note(OpenNoteCommand.notebookid, noteid)
         note = paper.html2text(note)
         self.view = sublime.active_window().new_file()
-        windowtitle = paper.get_note_title(OpenNoteCommand.notebookid, noteid)
-        self.view.set_name(windowtitle)
+        notetitle = paper.get_note_title(OpenNoteCommand.notebookid, noteid)
+        self.view.set_name(notetitle)
         self.view.insert(edit, self.view.sel()[0].begin(), note)
 
 class SaveExistingNoteCommand(sublime_plugin.TextCommand):
@@ -131,7 +134,7 @@ class PaperworkAPI(object):
           'Content-Type': 'application/json',
           'Authorization': 'Basic %s' % auth
         }
-
+     
         request = urllib.request.Request(self.endpoint, headers=headers)
         json_response = json.loads(urlopen(request).read().decode())
         response = json_response['response']
