@@ -5,6 +5,9 @@ import json, urllib.request, http.client, re, sys
 from urllib.request import Request, urlopen
 from base64 import b64encode
 
+#
+# TODO: Bugfix: Repeated saving of note introduces newlines at top of note and b/t lines
+
 global settings
 settings = sublime.load_settings('paperwork.sublime-settings')
 settings.add_on_change('reload', sublime.load_settings('paperwork.sublime-settings'))
@@ -16,7 +19,7 @@ class OpenNoteCommand(sublime_plugin.TextCommand):
 
     def list_notes(self, index):
         if index == -1:
-                return 
+                return
 
         notebooklist = sorted(paper.list_notebooks())
         notebooktitle = notebooklist[index]
@@ -27,7 +30,7 @@ class OpenNoteCommand(sublime_plugin.TextCommand):
     def show_note(self, index):
         if index == -1:
                 return
-    
+
         notelist = sorted(paper.list_notes(self.notebookid))
         OpenNoteCommand.notetitle = notelist[index]
         noteid = paper.note_to_id(self.notetitle)
@@ -51,14 +54,12 @@ class SaveExistingNoteCommand(sublime_plugin.TextCommand):
 
     def list_notes(self, index):
         if index == -1:
-                return 
+                return
 
         notebooklist = sorted(paper.list_notebooks())
         notebooktitle = notebooklist[index]
         OpenNoteCommand.notebookid = paper.notebook_to_id(notebooktitle)
         self.notelist = paper.list_notes(OpenNoteCommand.notebookid)
-        # TODO: Is this needed?
-        #viewnote = ViewNoteCommand(self.view)
         sublime.active_window().show_quick_panel(sorted(self.notelist), self.save_note)
 
     def save_note(self, index):
@@ -96,13 +97,13 @@ class SaveNewNoteCommand(sublime_plugin.TextCommand):
 
     def create_note(self, index):
         if index == -1:
-                return 
-    
+                return
+
         if self.view.name():
             viewtitle = self.view.name()
         else:
             viewtitle = "Untitled Note"
-            self.view.set_name(viewtitle)   
+            self.view.set_name(viewtitle)
 
         notebooklist = sorted(paper.list_notebooks())
         notebooktitle = notebooklist[index]
@@ -115,7 +116,7 @@ class SaveNewNoteCommand(sublime_plugin.TextCommand):
         content_preview = paper.text2html(content_preview)
         try:
             postnote = paper.create_note(notebookid, notetitle, self.note, self.note[:40])
-        except: 
+        except:
             print("An error occured. Unable to save new note")
         finally:
             print(postnote)
@@ -134,7 +135,7 @@ class PaperworkAPI(object):
           'Content-Type': 'application/json',
           'Authorization': 'Basic %s' % auth
         }
-     
+
         request = urllib.request.Request(self.endpoint, headers=headers)
         json_response = json.loads(urlopen(request).read().decode())
         response = json_response['response']
@@ -144,7 +145,6 @@ class PaperworkAPI(object):
         """ POST request template for creating, editing,
             deleting of notes & notebooks
         """
-
         username = settings.get("username", "")
         password = settings.get("password", "")
         authstring="%s:%s" % (username, password)
@@ -159,7 +159,7 @@ class PaperworkAPI(object):
         request = urllib.request.Request(self.endpoint, data=body, headers=headers)
         if self.putreq == 1:
             request.get_method = lambda: 'PUT'
-        try: 
+        try:
             json_response = json.loads(urlopen(request).read().decode())
             response = json_response['response']
             return response
@@ -176,7 +176,6 @@ class PaperworkAPI(object):
     def list_notebooks(self):
         """ Returns all notebook titles
         """
-
         protocol = settings.get("protocol", "https")
         domain = settings.get("domain", "")
         self.endpoint = '%s://%s/paperwork/api/v1/notebooks' % (protocol, domain)
@@ -258,8 +257,10 @@ class PaperworkAPI(object):
         response = self.post_request()
         return response
 
+    ##
+    ## Utility functions
     def notebook_to_id(self, title):
-        """ Returns the notebookid of a notebook title 
+        """ Returns the notebookid of a notebook title
             Use list_notebooks() to get notebook_titles
         """
         titleindex = self.notebook_titles.index(title)
@@ -267,7 +268,7 @@ class PaperworkAPI(object):
         return notebookid
 
     def note_to_id(self, title):
-        """ Returns the noteid of a note title 
+        """ Returns the noteid of a note title
             Use list_notes() to get note_titles
         """
         titleindex = self.note_titles.index(title)
@@ -290,15 +291,16 @@ class PaperworkAPI(object):
        # Formatting to match original from Paperwork
        note = re.sub('<p>','<p><br/>', note)
        note = re.sub('\n', '', note)
+       note = re.sub('"', '&quot;', note)
        return note
 
     def html2text(self, note):
         """ Strips HTML from response body,
             Returns plaintext
         """
-        note = re.sub('<p>','\n', note)
-        note = re.sub('</p>','', note)
-        note = re.sub('<br/>','\n', note)
+        note = re.sub('</p>','\n\n', note)
+        note = re.sub('<p>','', note)
+        note = re.sub('<br/>','', note)
         note = re.sub('&amp;','&', note)
         note = re.sub('&lt;','<', note)
         note = re.sub('&gt;','>', note)
