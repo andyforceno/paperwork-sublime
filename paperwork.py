@@ -6,7 +6,7 @@ from urllib.request import Request, urlopen
 from base64 import b64encode
 
 #
-# TODO: Bugfix: Repeated saving of note introduces newlines at top of note and b/t lines
+# TODO: Bugfix: Repeated saving of some notes introduces newlines at top of note and b/t lines
 
 global settings
 settings = sublime.load_settings('paperwork.sublime-settings')
