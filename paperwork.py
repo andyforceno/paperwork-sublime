@@ -5,8 +5,9 @@ import json, urllib.request, http.client, re, sys
 from urllib.request import Request, urlopen
 from base64 import b64encode
 
-#
-# TODO: Bugfix: Repeated saving of some notes introduces newlines at top of note and b/t lines
+# TODO: Implement searching of notes to save existing (see search_notes()
+# TODO: Bugfix: Repeated saving of some notes introduces newlines at top of note and between some lines
+# TODO: Show error in console if hostname cant be reached
 
 global settings
 settings = sublime.load_settings('paperwork.sublime-settings')
@@ -72,15 +73,15 @@ class SaveExisting(sublime_plugin.TextCommand):
     def run(self, edit):
         notelist = paper.list_notes(OpenNoteCommand.notebookid)
         noteid = paper.note_to_id(OpenNoteCommand.notetitle)
-        viewtitle = self.view.name()
+        notetitle = self.view.name()
         self.note = self.view.substr(sublime.Region(0, self.view.size()))
         content_preview = self.note[:40]
         self.note = paper.text2html(self.note)
         content_preview = paper.text2html(content_preview)
 
-        if OpenNoteCommand.notetitle == viewtitle:
+        if OpenNoteCommand.notetitle == notetitle:
             try:
-                editnote = paper.edit_note(OpenNoteCommand.notebookid, noteid, viewtitle, self.note, content_preview)
+                editnote = paper.edit_note(OpenNoteCommand.notebookid, noteid, notetitle, self.note, content_preview)
             except:
                 print("An errror occured. Unable to save existing note.")
             finally:
@@ -93,37 +94,33 @@ class SaveNewNoteCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         self.notebooklist = paper.list_notebooks()
         # Display list of notebooks
-        sublime.active_window().show_quick_panel(sorted(self.notebooklist), self.create_note)
+        sublime.active_window().show_quick_panel(sorted(self.notebooklist), self.input_title)
 
-    def create_note(self, index):
+    def input_title(self, index):
         if index == -1:
                 return
 
-        if self.view.name():
-            viewtitle = self.view.name()
-        else:
-            viewtitle = "Untitled Note"
-            self.view.set_name(viewtitle)
-
         notebooklist = sorted(paper.list_notebooks())
         notebooktitle = notebooklist[index]
-        notebookid = paper.notebook_to_id(notebooktitle)
-        notelist = paper.list_notes(notebookid)
-        notetitle = self.view.name()
+        self.notebookid = paper.notebook_to_id(notebooktitle)
+        caption = "Enter a title for this note: "
+        initial = ""
+        self.view.window().show_input_panel(caption, initial, self.save_new_note, None, None)
+
+    def save_new_note(self, notetitle):
         self.note = self.view.substr(sublime.Region(0, self.view.size()))
         content_preview = self.note[:40]
         self.note = paper.text2html(self.note)
         content_preview = paper.text2html(content_preview)
         try:
-            postnote = paper.create_note(notebookid, notetitle, self.note, self.note[:40])
+            postnote = paper.create_note(self.notebookid, notetitle, self.note, self.note[:40])
+            print(postnote)
         except:
             print("An error occured. Unable to save new note")
-        finally:
-            print(postnote)
 
 class PaperworkAPI(object):
     def get_request(self):
-        """ GET request template for getting
+        """ GET request template for gettinG
             notes and notebooks
         """
         username = settings.get("username", "")
@@ -178,7 +175,7 @@ class PaperworkAPI(object):
         """
         protocol = settings.get("protocol", "https")
         domain = settings.get("domain", "")
-        self.endpoint = '%s://%s/paperwork/api/v1/notebooks' % (protocol, domain)
+        self.endpoint = "%s://%s/paperwork/api/v1/notebooks" % (protocol, domain)
         response = self.get_request()
         # Print title of each notebook
         self.notebook_titles = [response[x]['title'] for x in range(0,(len(response)-1))]
@@ -222,15 +219,6 @@ class PaperworkAPI(object):
         notetitle = response['version']['title']
         return notetitle
 
-    def get_notebookid(self, noteid):
-        """ Given a noteid, return the notebookid
-            for that note
-        """
-        self.endpoint = paper.endpoint
-        response = self.get_request()
-        notebookid = response['response']['notebookid']
-        return notebookid
-
     ##
     ## POST & PUT requests
     def create_note(self, notebookid, title, content, content_preview):
@@ -263,7 +251,7 @@ class PaperworkAPI(object):
         """ Returns the notebookid of a notebook title
             Use list_notebooks() to get notebook_titles
         """
-        titleindex = self.notebook_titles.index(title)
+        titleindex = self.notebook_titles.index(title) 
         notebookid = self.notebook_ids[titleindex]
         return notebookid
 
@@ -273,6 +261,17 @@ class PaperworkAPI(object):
         """
         titleindex = self.note_titles.index(title)
         noteid = self.note_ids[titleindex]
+        return noteid
+
+    def search_notes(self, notetitle):
+        """ Search All Notes notebook for notetitle
+            Returns corresponding noteid.
+        """
+        # All Notes notebook
+        notebookid = '00000000-0000-0000-0000-000000000000'
+        notelist = self.list_notes(notebookid)
+        noteid = self.note_to_id(notetitle)
+        # TODO: How to get the notebookid?
         return noteid
 
     def text2html(self, note):
@@ -304,7 +303,7 @@ class PaperworkAPI(object):
         note = re.sub('&amp;','&', note)
         note = re.sub('&lt;','<', note)
         note = re.sub('&gt;','>', note)
-        note = re.sub('<p dir="ltr">','\n\n', note)
+        note = re.sub('<p dir="ltr">','', note)
         note = re.sub('<br clear="none">', '\n', note)
         note = re.sub('</div><div>', '\n', note)
         note = re.sub('&quot;', '"', note)

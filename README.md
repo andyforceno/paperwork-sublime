@@ -6,13 +6,13 @@ Paperwork for Sublime Text 3 allows you to open and save Paperwork notes via com
 This works best with notes that are plain text. There is only basic parsing of HTML to convert some formatting tags (and ST3's Python doesn't include html2text).
 
 ### To use:
-1. Copy paperwork.py, Default.sublime-commands, and paperwork.sublime-settings your ST3-config-folder/Packages/User/  
+1. Copy paperwork.py, Default.sublime-commands, and paperwork.sublime-settings your ST3-config-folder/Packages/User/
 2. Edit paperwork.sublime-settings to fill in your username, password, domain, and specify http or https.
 3. Open the command palette in Sublime Text 3 and enter 'paperwork' to see the menu options
 
 I recommend saving a new note and editing it a few times, comparing it to what you see on the Android app or the web interface, before editing and saving an existing note.
 
 Menu options: Open Note, Save New Note, and Save Existing Note. Save Existing will only save the note if the title of the note to be saved matches the title of the note selected. 
-When saving a new note, the note will be uploaded with the first line of text as the title. 
+When saving a new note, ``the note will be uploaded with the first line of text as the title.`` you will be prompted to enter the title. 
 
 See the console for errors. You will see confirmation and an API response if save was successful.
