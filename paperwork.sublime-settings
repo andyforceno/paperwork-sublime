@@ -2,5 +2,7 @@
     "username": "",      // Your Paperwork username
     "password": "",    // Your Paperwork password
     "domain": "",           // Your domain, e.g. example.com
-    "protocol": "https"           // http or https        
+    "protocol": "https",           // http or https        
+	"panel_save": "no"			// no will save without prompting user for note title
+    							// yes will ask for title via input panel
 }

@@ -1,91 +1,106 @@
 #! /usr/bin/python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-#
 import sublime, sublime_plugin
 import json, urllib.request, http.client, re, sys
 from urllib.request import Request, urlopen
 from base64 import b64encode
 
-# TODO: Implement searching of notes to save existing (see search_notes()
-# TODO: Bugfix: Repeated saving of some notes introduces newlines at top of note and between some lines
-# TODO: Show error in console if hostname cant be reached
-
 global settings
 settings = sublime.load_settings('paperwork.sublime-settings')
 settings.add_on_change('reload', sublime.load_settings('paperwork.sublime-settings'))
 
-class OpenNoteCommand(sublime_plugin.TextCommand):
+class ShowNotePanelCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         notebooklist = paper.list_notebooks()
-        sublime.active_window().show_quick_panel(sorted(notebooklist), self.list_notes)
+        sublime.active_window().show_quick_panel(sorted(notebooklist), self.notes_panel)
 
-    def list_notes(self, index):
+    def notes_panel(self, index):
         if index == -1:
                 return
 
         notebooklist = sorted(paper.list_notebooks())
         notebooktitle = notebooklist[index]
-        OpenNoteCommand.notebookid = paper.notebook_to_id(notebooktitle)
+        ShowNotePanelCommand.notebookid = paper.notebook_to_id(notebooktitle)
         self.notelist = paper.list_notes(self.notebookid)
-        sublime.active_window().show_quick_panel(sorted(self.notelist), self.show_note)
+        sublime.active_window().show_quick_panel(sorted(self.notelist), self.run_open)
 
-    def show_note(self, index):
+    def run_open(self, index):
         if index == -1:
                 return
 
         notelist = sorted(paper.list_notes(self.notebookid))
-        OpenNoteCommand.notetitle = notelist[index]
+        ShowNotePanelCommand.notetitle = notelist[index]
         noteid = paper.note_to_id(self.notetitle)
-        self.view.run_command("view_note")
+        self.view.run_command("open_note")
 
-class ViewNoteCommand(sublime_plugin.TextCommand):
+class OpenNoteCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        notelist = sorted(paper.list_notes(OpenNoteCommand.notebookid))
-        noteid = paper.note_to_id(OpenNoteCommand.notetitle)
-        note = paper.get_note(OpenNoteCommand.notebookid, noteid)
+        notelist = sorted(paper.list_notes(ShowNotePanelCommand.notebookid))
+        noteid = paper.note_to_id(ShowNotePanelCommand.notetitle)
+        note = paper.get_note(ShowNotePanelCommand.notebookid, noteid)
         note = paper.html2text(note)
         self.view = sublime.active_window().new_file()
-        notetitle = paper.get_note_title(OpenNoteCommand.notebookid, noteid)
+        notetitle = paper.get_note_title(ShowNotePanelCommand.notebookid, noteid)
         self.view.set_name(notetitle)
         self.view.insert(edit, self.view.sel()[0].begin(), note)
 
 class SaveExistingNoteCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         notebooklist = paper.list_notebooks()
-        sublime.active_window().show_quick_panel(sorted(notebooklist), self.list_notes)
+        panel_save = settings.get("panel_save", "no")
+        # Autosave setting in Paperwork-sublime.settings
+        if panel_save == "yes":
+            sublime.active_window().show_quick_panel(sorted(notebooklist), self.notes_panel)
+        else:
+            self.autosave_note()
 
-    def list_notes(self, index):
+    def notes_panel(self, index):
         if index == -1:
                 return
 
         notebooklist = sorted(paper.list_notebooks())
         notebooktitle = notebooklist[index]
-        OpenNoteCommand.notebookid = paper.notebook_to_id(notebooktitle)
-        self.notelist = paper.list_notes(OpenNoteCommand.notebookid)
-        sublime.active_window().show_quick_panel(sorted(self.notelist), self.save_note)
+        ShowNotePanelCommand.notebookid = paper.notebook_to_id(notebooktitle)
+        self.notelist = paper.list_notes(ShowNotePanelCommand.notebookid)
+        sublime.active_window().show_quick_panel(sorted(self.notelist), self.run_save)
 
-    def save_note(self, index):
-        notelist = sorted(paper.list_notes(OpenNoteCommand.notebookid))
-        OpenNoteCommand.notetitle = notelist[index]
-        noteid = paper.note_to_id(OpenNoteCommand.notetitle)
+    def run_save(self, index):
+        notelist = sorted(paper.list_notes(ShowNotePanelCommand.notebookid))
+        ShowNotePanelCommand.notetitle = notelist[index]
         self.view.run_command("save_existing")
+
+    def autosave_note(self):
+        notetitle = self.view.name()
+        notebookid, noteid = paper.search_notes(notetitle)
+        self.note = self.view.substr(sublime.Region(0, self.view.size()))
+        content_preview = self.note[:40]
+        self.note = paper.text2html(self.note)
+        content_preview = paper.text2html(content_preview)
+
+        try:
+            editnote = paper.edit_note(notebookid, noteid, notetitle, self.note, content_preview)
+            print(editnote)
+        except:
+            print("An error occured. Unable to save existing note.")
+        else:
+            print("Successfully saved existing note!")
 
 class SaveExisting(sublime_plugin.TextCommand):
     def run(self, edit):
-        notelist = paper.list_notes(OpenNoteCommand.notebookid)
-        noteid = paper.note_to_id(OpenNoteCommand.notetitle)
+        noteid = paper.note_to_id(ShowNotePanelCommand.notetitle)
         notetitle = self.view.name()
         self.note = self.view.substr(sublime.Region(0, self.view.size()))
         content_preview = self.note[:40]
         self.note = paper.text2html(self.note)
         content_preview = paper.text2html(content_preview)
 
-        if OpenNoteCommand.notetitle == notetitle:
+        if ShowNotePanelCommand.notetitle == notetitle:
             try:
-                editnote = paper.edit_note(OpenNoteCommand.notebookid, noteid, notetitle, self.note, content_preview)
+                editnote = paper.edit_note(ShowNotePanelCommand.notebookid, noteid, notetitle, self.note, content_preview)
+                print(editnote)
             except:
                 print("An errror occured. Unable to save existing note.")
-            finally:
-                print(editnote)
+            else:
                 print("Successfully saved existing note!")
         else:
             print("Note title mismatch! Save aborted.")
@@ -193,6 +208,7 @@ class PaperworkAPI(object):
         self.note_titles = []
         self.note_ids = []
         self.note_titles = [response[x]['version']['title'] for x in range(0,(len(response)-1))]
+        self.notebook_ids = [response[x]['notebook_id'] for x in range(0,(len(response)-1))]
         self.note_ids = [response[x]['id'] for x in range(0,(len(response)-1))]
         return self.note_titles
 
@@ -251,7 +267,7 @@ class PaperworkAPI(object):
         """ Returns the notebookid of a notebook title
             Use list_notebooks() to get notebook_titles
         """
-        titleindex = self.notebook_titles.index(title) 
+        titleindex = self.notebook_titles.index(title)
         notebookid = self.notebook_ids[titleindex]
         return notebookid
 
@@ -265,14 +281,16 @@ class PaperworkAPI(object):
 
     def search_notes(self, notetitle):
         """ Search All Notes notebook for notetitle
-            Returns corresponding noteid.
+            Returns corresponding notebookid and noteid
         """
         # All Notes notebook
         notebookid = '00000000-0000-0000-0000-000000000000'
         notelist = self.list_notes(notebookid)
         noteid = self.note_to_id(notetitle)
-        # TODO: How to get the notebookid?
-        return noteid
+        titleindex = self.note_titles.index(notetitle)
+        notebookid = self.notebook_ids[titleindex]
+
+        return notebookid, noteid
 
     def text2html(self, note):
        """ Convert plain text from an ST3 file view,
