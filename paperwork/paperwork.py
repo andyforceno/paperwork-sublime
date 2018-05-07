@@ -5,6 +5,10 @@ import json, urllib.request, http.client, re, sys
 from urllib.request import Request, urlopen
 from base64 import b64encode
 
+# TODO: Bugfix: Repeated saving of some notes introduces newlines at top of note and between some lines
+# TODO: content_preview shows different lines without whitespace between them
+# TODO: Show error in console if hostname cant be reached
+
 global settings
 settings = sublime.load_settings('paperwork.sublime-settings')
 settings.add_on_change('reload', sublime.load_settings('paperwork.sublime-settings'))
@@ -78,6 +82,7 @@ class SaveExistingNoteCommand(sublime_plugin.TextCommand):
         content_preview = paper.text2html(content_preview)
 
         try:
+            print(notebookid, noteid)
             editnote = paper.edit_note(notebookid, noteid, notetitle, self.note, content_preview)
             print(editnote)
         except:
@@ -123,19 +128,37 @@ class SaveNewNoteCommand(sublime_plugin.TextCommand):
         self.view.window().show_input_panel(caption, initial, self.save_new_note, None, None)
 
     def save_new_note(self, notetitle):
+        SaveNewNoteCommand.notetitle = notetitle
         self.note = self.view.substr(sublime.Region(0, self.view.size()))
         content_preview = self.note[:40]
         self.note = paper.text2html(self.note)
         content_preview = paper.text2html(content_preview)
         try:
-            postnote = paper.create_note(self.notebookid, notetitle, self.note, self.note[:40])
+            postnote = paper.create_note(self.notebookid, SaveNewNoteCommand.notetitle, self.note, self.note[:40])
             print(postnote)
         except:
             print("An error occured. Unable to save new note")
 
+        self.view.run_command("reload_saved_note")
+
+class ReloadSavedNoteCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        """ Reloads the new note just saved so 
+            user can continue editing 
+        """
+        notebookid, noteid = paper.search_notes(SaveNewNoteCommand.notetitle)
+        note = paper.get_note(notebookid, noteid)
+        note = paper.html2text(note)
+        self.view.set_name(SaveNewNoteCommand.notetitle)
+        self.view.run_command("select_all")
+        try:
+            self.view.run_command("insert", {"characters": note})
+        except:
+            print("Unable to load saved note")
+
 class PaperworkAPI(object):
     def get_request(self):
-        """ GET request template for gettinG
+        """ GET request template for getting
             notes and notebooks
         """
         username = settings.get("username", "")
