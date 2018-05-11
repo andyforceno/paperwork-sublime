@@ -19,10 +19,14 @@ Menu options: `Open Note`, `Save New Note`, and `Save Existing Note`.
 New! The newly-saved note will reload in the current view so you can continue editing without having to reload the note yourself.
 
 `Save Existing Note` will search for the note and save it to the correct notebook, by default. 
-If you have a large number of notes and notebooks, this will be slow. 
+If you have a large number of notes and notebooks, this ~~will~~ may be slow. 
 It may also be buggy, sometimes failing to save (though I haven't encountered this yet). 
 To disable this and use the quick panel menu to select a note instead, set `panel_save` to `yes` in `paperwork.sublime-settings`
 
 With `panel_save` set to `yes`, `Save Existing Note` will only save the note if the title of the note to be saved matches the title of the note selected. 
 
 See the console for errors. You will see confirmation and an API response if save was successful.
+
+## What's new:
+
+- Compressed API responses for 50% faster listing and saving of notes and notebooks!
