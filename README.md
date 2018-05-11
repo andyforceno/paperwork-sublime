@@ -3,7 +3,7 @@ A plugin for Sublime Text 3 that allows you to create and edit notes on your Pap
 
 Paperwork for Sublime Text 3 allows you to open and save Paperwork notes via commands in the command palette. Lists of notebooks and notes are displayed in a quick panel.
 
-This works best with notes that are plain text. There is only basic parsing of HTML to convert some formatting tags (and ST3's Python doesn't include html2text).
+This works best with notes that are plain text. There is only basic parsing of HTML to convert some formatting tags (and it could use work).
 
 ### To use:
 1. Copy the paperwork folder to your ST3-config-folder/Packages/
@@ -16,7 +16,7 @@ I recommend saving a new note and editing it a few times, comparing it to what y
 Menu options: `Open Note`, `Save New Note`, and `Save Existing Note`. 
 
 `Save New Note` will prompt you to enter a note title. 
-New! The newly-saved note will reload in the current view so you can continue editing without having to reload the note yourself.
+The newly-saved note will reload in the current view so you can continue editing without having to reload the note yourself.
 
 `Save Existing Note` will search for the note and save it to the correct notebook, by default. 
 If you have a large number of notes and notebooks, this ~~will~~ may be slow. 
@@ -27,6 +27,7 @@ With `panel_save` set to `yes`, `Save Existing Note` will only save the note if 
 
 See the console for errors. You will see confirmation and an API response if save was successful.
 
-## What's new:
+### What's new:
 
 - Compressed API responses for 50% faster listing and saving of notes and notebooks!
+- Newly-saved notes will reload in the current view so you can keep editing without reloading the note yourself.
