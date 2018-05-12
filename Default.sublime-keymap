@@ -1,8 +1,0 @@
-[
-	// Save existing note
-	{ "keys": ["alt+shift+s"], "command": "save_existing" },
-	// Save new note
-	{ "keys": ["alt+shift+n"], "command": "save_new_note" },
-	// Open note
-	{ "keys": ["alt+shift+o"], "command": "show_note_panel" }
-]
