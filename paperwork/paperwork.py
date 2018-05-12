@@ -1,12 +1,12 @@
 #! /usr/bin/python3
 # -*- coding: utf-8 -*-#
 import sublime, sublime_plugin
-import json, urllib.request, http.client, re, sys
-from urllib.request import Request, urlopen
+import gzip, http.client, json
+import re, sys, urllib.request
 from base64 import b64encode
 
 # TODO: Bugfix: Repeated saving of some notes introduces newlines at top of note and between some lines
-# TODO: content_preview shows different lines without whitespace between them
+# TODO: content_preview shows lines without whitespace between them
 # TODO: Show error in console if hostname cant be reached
 
 global settings
@@ -158,7 +158,7 @@ class ReloadSavedNoteCommand(sublime_plugin.TextCommand):
 
 class PaperworkAPI(object):
     def get_request(self):
-        """ GET request template for getting
+        """ GET request for returning
             notes and notebooks
         """
         username = settings.get("username", "")
@@ -168,16 +168,25 @@ class PaperworkAPI(object):
 
         headers = {
           'Content-Type': 'application/json',
-          'Authorization': 'Basic %s' % auth
-        }
+          'Authorization': 'Basic %s' % auth,
+          'Accept-Encoding': 'gzip, deflate'
+            }
 
-        request = urllib.request.Request(self.endpoint, headers=headers)
-        json_response = json.loads(urlopen(request).read().decode())
-        response = json_response['response']
-        return response
+        getreq = urllib.request.Request(self.endpoint, headers=headers)
+        response = urllib.request.urlopen(getreq)
+ 
+        if response.info().get('Content-Encoding') == 'gzip':
+            response = gzip.decompress(response.read()).decode('utf-8')
+            json_response = json.loads(response)
+        elif response.info().get('Content-Encoding') == 'deflate':
+            json_response = json.loads(response.read().decode())
+        else:
+            json_response = json.loads(response.read().decode())
+
+        return json_response['response']
 
     def post_request(self):
-        """ POST request template for creating, editing,
+        """ POST request for creating, editing,
             deleting of notes & notebooks
         """
         username = settings.get("username", "")
@@ -186,9 +195,9 @@ class PaperworkAPI(object):
         auth = b64encode(authstring.encode()).decode("ascii")
 
         headers = {
-                  'Content-Type': 'application/json',
-                  'Authorization': 'Basic %s' % auth
-                }
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic %s' % auth
+            }
 
         body = self.body.encode('utf-8')
         request = urllib.request.Request(self.endpoint, data=body, headers=headers)
@@ -338,7 +347,7 @@ class PaperworkAPI(object):
         """ Strips HTML from response body,
             Returns plaintext
         """
-        note = re.sub('</p>','\n\n', note)
+        note = re.sub('</p>','\n', note)
         note = re.sub('<p>','', note)
         note = re.sub('<br/>','', note)
         note = re.sub('&amp;','&', note)
