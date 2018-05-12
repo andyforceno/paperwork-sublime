@@ -29,5 +29,6 @@ See the console for errors. You will see confirmation and an API response if sav
 
 ### What's new:
 
+- Keyboard shortcuts: `Alt+Shift+n: Save New Note`, `Alt+Shift+s: Save Existing Note`, `Alt+Shift+o: Open Note`
 - Compressed API responses for 50% faster listing and saving of notes and notebooks!
 - Newly-saved notes will reload in the current view so you can keep editing without reloading the note yourself.
