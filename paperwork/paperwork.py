@@ -42,6 +42,7 @@ class OpenNoteCommand(sublime_plugin.TextCommand):
         notelist = sorted(paper.list_notes(ShowNotePanelCommand.notebookid))
         noteid = paper.note_to_id(ShowNotePanelCommand.notetitle)
         note = paper.get_note(ShowNotePanelCommand.notebookid, noteid)
+        #note = parser.dehtml(note)
         note = paper.html2text(note)
         self.view = sublime.active_window().new_file()
         notetitle = paper.get_note_title(ShowNotePanelCommand.notebookid, noteid)
@@ -133,11 +134,11 @@ class SaveNewNoteCommand(sublime_plugin.TextCommand):
         content_preview = self.note[:40]
         self.note = paper.text2html(self.note)
         content_preview = paper.text2html(content_preview)
-        try:
-            postnote = paper.create_note(self.notebookid, SaveNewNoteCommand.notetitle, self.note, self.note[:40])
-            print(postnote)
-        except:
-            print("An error occured. Unable to save new note")
+        #try:
+        postnote = paper.create_note(self.notebookid, SaveNewNoteCommand.notetitle, self.note, self.note[:40])
+        print(postnote)
+        #except:
+            #print("An error occured. Unable to save new note")
 
         self.view.run_command("reload_saved_note")
 
@@ -156,6 +157,48 @@ class ReloadSavedNoteCommand(sublime_plugin.TextCommand):
         except:
             print("Unable to load saved note")
 
+class DeleteNoteCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        notebooklist = paper.list_notebooks()
+        sublime.active_window().show_quick_panel(sorted(notebooklist), self.notes_panel)
+
+    def notes_panel(self, index):
+        if index == -1:
+                return
+
+        notebooklist = sorted(paper.list_notebooks())
+        notebooktitle = notebooklist[index]
+        self.notebookid = paper.notebook_to_id(notebooktitle)
+        self.notelist = paper.list_notes(self.notebookid)
+        sublime.active_window().show_quick_panel(sorted(self.notelist), self.confirm_del)
+
+    def confirm_del(self, index):
+        """ Confirmation dialogue for note deletion """
+        if index == -1:
+                return
+
+        notelist = sorted(paper.list_notes(self.notebookid))
+        self.notetitle = notelist[index]
+        self.noteid = paper.note_to_id(self.notetitle)
+
+        #try:
+        caption = "Are you sure you want to delete %s ? (y/n)" % self.notetitle
+        initial = ""
+        self.view.window().show_input_panel(caption, initial, self.del_note, None, None)
+
+    def del_note(self, userinput):
+        """ Gets userinput from confirm_del()
+            and either deletes the note or aborts
+        """
+        if userinput is 'n':
+            return
+        elif userinput is 'y':
+            print("deleting noteid %s in notebookid %s" % (self.noteid, self.notebookid))
+            delnote = paper.delete_note(self.notebookid, self.noteid)
+            print(delnote)
+        else:
+            print("That answer sucks, try again.")
+
 class PaperworkAPI(object):
     def get_request(self):
         """ GET request for returning
@@ -172,8 +215,12 @@ class PaperworkAPI(object):
           'Accept-Encoding': 'gzip, deflate'
             }
 
-        getreq = urllib.request.Request(self.endpoint, headers=headers)
-        response = urllib.request.urlopen(getreq)
+        request = urllib.request.Request(self.endpoint, headers=headers)
+
+        if self.apimethod is 'DELETE':
+            request.get_method = lambda: 'DELETE'
+
+        response = urllib.request.urlopen(request)
  
         if response.info().get('Content-Encoding') == 'gzip':
             response = gzip.decompress(response.read()).decode('utf-8')
@@ -201,10 +248,11 @@ class PaperworkAPI(object):
 
         body = self.body.encode('utf-8')
         request = urllib.request.Request(self.endpoint, data=body, headers=headers)
-        if self.putreq == 1:
+
+        if self.apimethod is 'PUT':
             request.get_method = lambda: 'PUT'
         try:
-            json_response = json.loads(urlopen(request).read().decode())
+            json_response = json.loads(urllib.request.urlopen(request).read().decode())
             response = json_response['response']
             return response
         except urllib.error.HTTPError as err:
@@ -223,6 +271,7 @@ class PaperworkAPI(object):
         protocol = settings.get("protocol", "https")
         domain = settings.get("domain", "")
         self.endpoint = "%s://%s/paperwork/api/v1/notebooks" % (protocol, domain)
+        self.apimethod = None
         response = self.get_request()
         # Print title of each notebook
         self.notebook_titles = [response[x]['title'] for x in range(0,(len(response)-1))]
@@ -250,6 +299,7 @@ class PaperworkAPI(object):
         protocol = settings.get("protocol", "https")
         domain = settings.get("domain", "")
         self.endpoint = "%s://%s/paperwork/api/v1/notebooks/%s/notes/%s" % (protocol, domain, notebookid, noteid)
+        self.apimethod = None
         response = self.get_request()
         # Get content of note
         note = response['version']['content']
@@ -277,7 +327,7 @@ class PaperworkAPI(object):
         domain = settings.get("domain", "")
         self.body = """ { "title": "%s", "content": "%s", "content_preview": "%s" } """ % (title, content, content_preview)
         self.endpoint = "%s://%s/paperwork/api/v1/notebooks/%s/notes/" % (protocol, domain, notebookid)
-        self.putreq = 0
+        self.apimethod = None
         response = self.post_request()
         return response
 
@@ -285,12 +335,22 @@ class PaperworkAPI(object):
         """ Save an existing note by supplying notebookid,
             noteid, content, and content_preview
         """
-        self.putreq = 1
+        self.apimethod = 'PUT'
         protocol = settings.get("protocol", "https")
         domain = settings.get("domain", "")
         self.body = """ { "title": "%s", "content": "%s", "content_preview": "%s" } """ % (title, content, content_preview)
         self.endpoint = "%s://%s/paperwork/api/v1/notebooks/%s/notes/%s" % (protocol, domain, notebookid, noteid)
         response = self.post_request()
+        return response
+
+    def delete_note(self, notebookid, noteid):
+        """ Deletes note with note in notebookid
+        """
+        protocol = settings.get("protocol", "https")
+        domain = settings.get("domain", "")
+        self.endpoint = "%s://%s/paperwork/api/v1/notebooks/%s/notes/%s" % (protocol, domain, notebookid, noteid)
+        self.apimethod = 'DELETE'
+        response = self.get_request()
         return response
 
     ##
@@ -358,6 +418,63 @@ class PaperworkAPI(object):
         note = re.sub('</div><div>', '\n', note)
         note = re.sub('&quot;', '"', note)
         return note
+
+    def dehtml(text):
+            try:
+                parser = _DeHTMLParser()
+                parser.feed(text)
+                parser.close()
+                return parser.text()
+            except:
+                print_exc(file=stderr)
+                return text
+
+"""
+HTML <-> text conversions.
+From: https://stackoverflow.com/a/3987802/3605584
+"""
+from html.parser import HTMLParser
+from re import sub
+from sys import stderr
+from traceback import print_exc
+
+class _DeHTMLParser(HTMLParser):
+    def __init__(self):
+        HTMLParser.__init__(self)
+        self.__text = []
+
+    def handle_data(self, data):
+        text = data.strip()
+        if len(text) > 0:
+            text = sub('[ \t\r\n]+', ' ', text)
+            self.__text.append(text + ' ')
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'p':
+            self.__text.append('\n\n')
+        elif tag == 'br':
+            self.__text.append('\n')
+
+    def handle_startendtag(self, tag, attrs):
+        if tag == 'br':
+            self.__text.append('\n\n')
+
+    def text(self):
+        return ''.join(self.__text).strip()
+
+
+    def text_to_html(text):
+        """
+        Convert the given text to html, wrapping what looks like URLs with <a> tags,
+        converting newlines to <br> tags and converting confusing chars into html
+        entities.
+        """
+        def f(mo):
+            t = mo.group()
+            if len(t) == 1:
+                return {'&':'&amp;', "'":'&#39;', '"':'&quot;', '<':'&lt;', '>':'&gt;'}.get(t)
+            return '<a href="%s">%s</a>' % (t, t)
+        return re.sub(r'https?://[^] ()"\';]+|[&\'"<>]', f, text)
 
 paper = PaperworkAPI()
 

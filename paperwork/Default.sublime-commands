@@ -1,5 +1,6 @@
 [
   { "caption": "Paperwork: Open Note", "command": "show_note_panel" },
  { "caption": "Paperwork: Save New Note", "command": "save_new_note" },
- { "caption": "Paperwork: Save Existing Note", "command": "save_existing_note" }
+ { "caption": "Paperwork: Save Existing Note", "command": "save_existing_note" },
+ { "caption": "Paperwork: Delete Note", "command": "delete_note" },
 ]
