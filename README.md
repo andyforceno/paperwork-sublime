@@ -3,7 +3,8 @@ A plugin for Sublime Text 3 that allows you to create and edit notes on your Pap
 
 Paperwork for Sublime Text 3 allows you to open and save Paperwork notes via commands in the command palette. Lists of notebooks and notes are displayed in a quick panel.
 
-This works best with notes that are plain text. There is only basic parsing of HTML to convert some formatting tags (and it could use work).
+This works best with notes that are plain text. There is only basic parsing of HTML to convert some formatting tags. 
+I'm in the process of improving the HTML parsing, currently it has some flaws due to bad HTML code in the notes.
 
 ### To use:
 1. Copy the paperwork folder to your ST3-config-folder/Packages/

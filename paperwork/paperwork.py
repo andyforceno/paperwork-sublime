@@ -43,6 +43,7 @@ class OpenNoteCommand(sublime_plugin.TextCommand):
         noteid = paper.note_to_id(ShowNotePanelCommand.notetitle)
         note = paper.get_note(ShowNotePanelCommand.notebookid, noteid)
         #note = parser.dehtml(note)
+        print(note)
         note = paper.html2text(note)
         self.view = sublime.active_window().new_file()
         notetitle = paper.get_note_title(ShowNotePanelCommand.notebookid, noteid)
@@ -408,8 +409,8 @@ class PaperworkAPI(object):
             Returns plaintext
         """
         note = re.sub('</p>','\n', note)
-        note = re.sub('<p>','', note)
-        note = re.sub('<br/>','', note)
+        note = re.sub('<p>','\n', note)
+        note = re.sub('<br/>','\n', note)
         note = re.sub('&amp;','&', note)
         note = re.sub('&lt;','<', note)
         note = re.sub('&gt;','>', note)
@@ -418,6 +419,10 @@ class PaperworkAPI(object):
         note = re.sub('</div><div>', '\n', note)
         note = re.sub('&quot;', '"', note)
         return note
+
+        #### STOPPED HERE!
+        # Try something like this to strip text out:
+        # note = ['<p>%s</p>' % p.strip() for p in note]
 
     def dehtml(text):
             try:
