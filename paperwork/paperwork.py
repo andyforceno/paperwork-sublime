@@ -42,8 +42,8 @@ class OpenNoteCommand(sublime_plugin.TextCommand):
         notelist = sorted(paper.list_notes(ShowNotePanelCommand.notebookid))
         noteid = paper.note_to_id(ShowNotePanelCommand.notetitle)
         note = paper.get_note(ShowNotePanelCommand.notebookid, noteid)
-        #note = parser.dehtml(note)
-        print(note)
+        #note = dehtml(note)
+        #print(note)
         note = paper.html2text(note)
         self.view = sublime.active_window().new_file()
         notetitle = paper.get_note_title(ShowNotePanelCommand.notebookid, noteid)
@@ -94,23 +94,46 @@ class SaveExistingNoteCommand(sublime_plugin.TextCommand):
 
 class SaveExisting(sublime_plugin.TextCommand):
     def run(self, edit):
-        noteid = paper.note_to_id(ShowNotePanelCommand.notetitle)
-        notetitle = self.view.name()
-        self.note = self.view.substr(sublime.Region(0, self.view.size()))
-        content_preview = self.note[:40]
-        self.note = paper.text2html(self.note)
-        content_preview = paper.text2html(content_preview)
+        # This should only trigger when user has used the quick panel
+        if hasattr(ShowNotePanelCommand, 'notetitle'):
+            noteid = paper.note_to_id(ShowNotePanelCommand.notetitle)
+            notetitle = self.view.name()
+            self.note = self.view.substr(sublime.Region(0, self.view.size()))
+            content_preview = self.note[:40]
+            self.note = paper.text2html(self.note)
+            content_preview = paper.text2html(content_preview)
 
-        if ShowNotePanelCommand.notetitle == notetitle:
-            try:
-                editnote = paper.edit_note(ShowNotePanelCommand.notebookid, noteid, notetitle, self.note, content_preview)
-                print(editnote)
-            except:
-                print("An errror occured. Unable to save existing note.")
+            # If note panel was used to save note, this will be true
+            # and we already have notebookid and noteid
+            if ShowNotePanelCommand.notetitle == notetitle:
+                try:
+                    editnote = paper.edit_note(ShowNotePanelCommand.notebookid, noteid, notetitle, self.note, content_preview)
+                    print(editnote)
+                except:
+                    print("An error occurred. Unable to save existing note.")
+                else:
+                    print("Successfully saved existing note!")
+                    self.view.run_command("reload_saved_note",{"notetitle": notetitle})
             else:
-                print("Successfully saved existing note!")
+                print("Note title mismatch! Save aborted.")
+        # Otherwise, user saved via shortcut key
+        # and we have to get the notebookid and noteid
         else:
-            print("Note title mismatch! Save aborted.")
+            notetitle = self.view.name()
+            notebookid, noteid = paper.search_notes(notetitle)
+            self.notetitle = self.view.name()
+            self.note = self.view.substr(sublime.Region(0, self.view.size()))
+            content_preview = self.note[:40]
+            self.note = paper.text2html(self.note)
+            content_preview = paper.text2html(content_preview)
+            try:
+                editnote = paper.edit_note(notebookid, noteid, self.notetitle, self.note, content_preview)
+                print(editnote)
+                self.view.run_command("reload_saved_note",{"notetitle": self.notetitle})
+            except:
+                print("An error occurred. Unable to save existing note: %s" % self.notetitle)
+            else:
+                print("Successfully saved existing note: %s" % self.notetitle)
 
 class SaveNewNoteCommand(sublime_plugin.TextCommand):
     def run(self, edit):
@@ -130,28 +153,27 @@ class SaveNewNoteCommand(sublime_plugin.TextCommand):
         self.view.window().show_input_panel(caption, initial, self.save_new_note, None, None)
 
     def save_new_note(self, notetitle):
-        SaveNewNoteCommand.notetitle = notetitle
+        self.notetitle = notetitle
         self.note = self.view.substr(sublime.Region(0, self.view.size()))
         content_preview = self.note[:40]
         self.note = paper.text2html(self.note)
         content_preview = paper.text2html(content_preview)
-        #try:
-        postnote = paper.create_note(self.notebookid, SaveNewNoteCommand.notetitle, self.note, self.note[:40])
-        print(postnote)
-        #except:
-            #print("An error occured. Unable to save new note")
-
-        self.view.run_command("reload_saved_note")
+        try:
+            postnote = paper.create_note(self.notebookid, self.notetitle, self.note, self.note[:40])
+            print(postnote)
+            self.view.run_command("reload_saved_note",{"notetitle": self.notetitle})
+        except:
+            print("An error occured. Unable to save new note.")
 
 class ReloadSavedNoteCommand(sublime_plugin.TextCommand):
-    def run(self, edit):
-        """ Reloads the new note just saved so 
-            user can continue editing 
+    def run(self, edit, notetitle):
+        """ Reloads the new note just saved so
+            user can continue editing
         """
-        notebookid, noteid = paper.search_notes(SaveNewNoteCommand.notetitle)
+        notebookid, noteid = paper.search_notes(notetitle)
         note = paper.get_note(notebookid, noteid)
         note = paper.html2text(note)
-        self.view.set_name(SaveNewNoteCommand.notetitle)
+        self.view.set_name(notetitle)
         self.view.run_command("select_all")
         try:
             self.view.run_command("insert", {"characters": note})
@@ -198,7 +220,7 @@ class DeleteNoteCommand(sublime_plugin.TextCommand):
             delnote = paper.delete_note(self.notebookid, self.noteid)
             print(delnote)
         else:
-            print("That answer sucks, try again.")
+            print("Save aborted. Answer must be 'y' or 'n'.")
 
 class PaperworkAPI(object):
     def get_request(self):
@@ -216,13 +238,13 @@ class PaperworkAPI(object):
           'Accept-Encoding': 'gzip, deflate'
             }
 
-        request = urllib.request.Request(self.endpoint, headers=headers)
+        getreq = urllib.request.Request(self.endpoint, headers=headers)
 
         if self.apimethod is 'DELETE':
             request.get_method = lambda: 'DELETE'
 
-        response = urllib.request.urlopen(request)
- 
+        response = urllib.request.urlopen(getreq)
+
         if response.info().get('Content-Encoding') == 'gzip':
             response = gzip.decompress(response.read()).decode('utf-8')
             json_response = json.loads(response)
@@ -378,10 +400,12 @@ class PaperworkAPI(object):
         """
         # All Notes notebook
         notebookid = '00000000-0000-0000-0000-000000000000'
+        self.apimethod = None
         notelist = self.list_notes(notebookid)
         noteid = self.note_to_id(notetitle)
         titleindex = self.note_titles.index(notetitle)
         notebookid = self.notebook_ids[titleindex]
+
 
         return notebookid, noteid
 

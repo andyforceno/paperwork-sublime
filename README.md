@@ -30,7 +30,9 @@ See the console for errors. You will see confirmation and an API response if sav
 
 ### What's new:
 
+- Fixed some bugs when saving from the quick panel and via shortcut keys
+- All saved notes will reload in the cuture view so you can continue editing!
 - Keyboard shortcuts: `Alt+Shift+n: Save New Note`, `Alt+Shift+s: Save Existing Note`, `Alt+Shift+o: Open Note`
 - Delete notes! New `Delete Note` command palette menu item allows you to select a note to delete (will confirm before deleting)
 - Compressed API responses for 50% faster listing and saving of notes and notebooks!
-- Newly-saved notes will reload in the current view so you can keep editing without reloading the note yourself.
+- ~~Newly-saved notes will reload in the current view so you can keep editing without reloading the note yourself.~~
