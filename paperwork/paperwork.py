@@ -220,7 +220,7 @@ class DeleteNoteCommand(sublime_plugin.TextCommand):
             delnote = paper.delete_note(self.notebookid, self.noteid)
             print(delnote)
         else:
-            print("Save aborted. Answer must be 'y' or 'n'.")
+            print("Delete aborted. Answer must be 'y' or 'n'.")
 
 class PaperworkAPI(object):
     def get_request(self):
