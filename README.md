@@ -6,6 +6,9 @@ Paperwork for Sublime Text 3 allows you to open and save Paperwork notes via com
 This works best with notes that are plain text. There is only basic parsing of HTML to convert some formatting tags. 
 I'm in the process of improving the HTML parsing, currently it has some flaws due to bad HTML code in the notes.
 
+UPDATE (09-17-20): I am no longer maintaining this, as I no longer use Paperwork. I've found that using Syncthing with Sublime Text on my desktop and the Jotterpad app on my Android phone provides the same functionality I was seeking with Paperwork, and it's far easier to setup, with absolutely nothing in the way of maintenance. I am keeping this here for archival purposes. I found this project very helpful in learning how to create plugins for Sublime Text, so perhaps you will, too.
+
+
 ### To use:
 1. Copy the paperwork folder to your ST3-config-folder/Packages/
 2. Edit `paperwork.sublime-settings` to fill in your `username`, `password`, `domain`, specify `http` or `https` for `protocol`, and `yes` or `no` for `panel_save`
